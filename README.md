@@ -10,5 +10,6 @@ Aggregated volume by month and presented in graph
 
 * NYC Open Data, Department of Health, Restaurant Violations 
 * Script to tidy the data, and learn if certain types of restaurants and violations, had a high correlation to closure, why? 
-Classification logistic regression,  which types of food (cuisine type) and violation types, may be leading indicators of restaurant closings (for health violations).   
-Preprocesses string fields, to time-objects, time-deltas, created dummies for cuisine and violation types, used kbest algrithm to find the most informative features.
+* Classification logistic regression,  which types of food (cuisine type) and violation types, may be leading indicators of restaurant closings (for health violations).   
+* Preprocessed string fields, to time-objects, time-deltas, created dummies for cuisine and violation types, 
+* Used kbest algrithm to find the most informative features.
