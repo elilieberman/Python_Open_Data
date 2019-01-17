@@ -2,7 +2,7 @@
 Python code for NYC Open Data Sources, tidy, features, charts
 
 * Script to generate chart of New York City ride-share major competitors market-share 
-Uses SODA api to download updated NYC open data for taxi industry.  
+Uses SODA api to download updated NYC open data for taxi industry. (SODA doesn't work in latest version of Python 3.7)  
 Pre-processing of strings fields to date objects, integers, for grouping operations.
 Wrote function to tidy company names and multiple names for Uber, Lyft, VIA, Gett
 Aggregated volume by month and presented in graph
@@ -12,7 +12,7 @@ Aggregated volume by month and presented in graph
 * Tidy the data, and learn if certain types of restaurants and violations, had a high correlation to closure, why? 
 * Classification logistic regression,  which types of food (cuisine type) and violation types, may be leading indicators of restaurant closings (for health violations).   
 * Preprocessed string fields, to time-objects, time-deltas, created dummies for cuisine and violation types, 
-* Used kbest algrithm to find the most informative features.
+* Used k-best algorithm to find the most informative features.
 
 # NYC TAP Files
 Review of NYC open data related to metals concentration in NYC  tap water.
