@@ -1,0 +1,167 @@
+import pandas as pd
+pd.set_option('display.max_columns', None)
+pd.option_context('display.max_colwidth', None)
+pd.set_option('display.width', 1000)
+import matplotlib.pyplot as plt
+import os
+os.environ['PROJ_LIB'] = r'C:\Users\runner\Anaconda3\pkgs\proj4-4.9.3-vc14_5\Library\share' # fixes cant find "epsg" and PROJ_LIB for BASEMAP
+from mpl_toolkits.basemap import Basemap
+import numpy as np
+import datetime
+from scipy import stats #used for relative sizing/coloring of geo/heat maps used in the process
+
+#%% datasource https://data.cityofnewyork.us/Environment/Lead-At-The-Tap-Results/kdqv-qs7p
+# Latitiude and longitute for Zipcode bounds  https://github.com/rstudio/shiny-examples/blob/master/063-superzip-example/data/zip_codes_states.csv
+geo = pd.read_csv("C:\EliPersonal\Python\Datasets\zip_codes_states.csv", dtype={'zip_code': object, 'latitude': object,'longitude': object})
+geo.rename(columns = {'zip_code' : 'Zipcode'}, inplace = True)
+metals = pd.read_csv("C:\EliPersonal\Python\Datasets\Lead_and_Copper_Data.csv",  dtype={'Zipcode': object}) # orig filename too long
+metals = pd.merge(metals, geo, on='Zipcode', how='left')
+metals.head()
+metals.iloc[0:4, 0:4]
+metals.dtypes
+metals.info()
+metals.describe().transpose()
+
+metals['Copper 1-2 Minute Flush (mg/L)'] = metals['Copper 1-2 Minute Flush (mg/L)'].apply(float)
+metals['Copper 5 minute Flush (mg/L)']  = metals['Copper 5 minute Flush (mg/L)'] .apply(float)
+metals['Copper First Draw (mg/L)'] = metals['Copper First Draw (mg/L)'].apply(float)
+metals['Lead 1-2 Minute Flush (mg/L)'] = metals['Lead 1-2 Minute Flush (mg/L)'].apply(float)
+metals['Lead 5 Minute Flush (mg/L)']  = metals['Lead 5 Minute Flush (mg/L)'].apply(float)
+metals['Lead First_Draw (mg/L)'] = metals['Lead First_Draw (mg/L)'].apply(float)
+metals['Date Collected'] = metals['Date Collected'].apply(lambda x: datetime.datetime.strptime(x, '%m/%d/%Y'))
+metals['Date Received'] = metals['Date Received'].apply(lambda x: datetime.datetime.strptime(x, '%m/%d/%Y'))
+metals['yr_mo'] = metals['Date Collected'].apply(lambda x: x.strftime('%Y-%m'))
+metals['year'] = pd.DatetimeIndex(metals['Date Collected']).year
+metals['month'] = pd.DatetimeIndex(metals['Date Collected']).month
+#metals = pd.merge(metals, geo.iloc[:, 0:3], how = 'left', on = 'Zipcode')
+
+#rename columns to shortnames
+metals = metals.rename(columns = {'Copper 1-2 Minute Flush (mg/L)' : 'cop12', 
+                         'Copper 5 minute Flush (mg/L)' : 'cop5',
+                         'Copper First Draw (mg/L)' : 'copfd',
+                         'Date Collected' : 'datec', 
+                        'Date Received'  : 'dater',
+                         'Lead 1-2 Minute Flush (mg/L)' : 'lead12',
+                         'Lead 5 Minute Flush (mg/L)' : 'lead5',
+                         'Lead First Draw (mg/L)' : 'leadfd'
+                                                   })  # could also use inplace=True argument after curly bracket
+cop12_city_mean = metals.groupby(['yr_mo'])['cop12'].mean()
+metals['cop5'].idxmax(axis=0) #find ROW with highest value 
+summary = metals.groupby(['yr_mo', 'Zipcode'], as_index = False)['lead12', 'cop12'].mean().sort_values(['yr_mo', 'Zipcode'], ascending=True)
+summary.dtypes
+summary['lead_zip_month'] = summary.groupby(['yr_mo', 'Zipcode'])['lead12'].transform('mean') - summary.groupby('yr_mo')['lead12'].transform('mean')
+summary['lead12_pct'] = summary['lead12'].rank(pct = True) # for graph coloring intensity/size
+summary['cop12_pct'] = summary['cop12'].rank(pct = True) # for graph coloring intensity/size
+print(summary.groupby(['yr_mo'])['lead12'].count()) # check value, that monthly average is average of zipcode mean, one value per zip code, distinct...
+print (summary.head(20))
+summary = pd.merge(summary, geo, how = 'left', on = 'Zipcode')
+summary.dtypes
+
+# function to find max values of each column#
+max_table = {}
+def maxes (df):
+    #max_table = {}
+     #df.apply()
+    for c in df.columns:
+        max_table[c] = df[c].max()
+    return max_table
+    print(max_table)
+metals.Zipcode.nunique() #number unique values
+metals.Zipcode.value_counts()[metals['Zipcode'].value_counts()>10]
+metals.Zipcode.value_counts(ascending = False).head(10)
+quantile = metals['lead12'].quantile(.75)
+# metals.to_csv(r'C:\Users\runner\Downloads\metals.csv', index = None, header=True)
+
+#%%   Zip Code Map
+from mpl_toolkits.basemap import Basemap, cm
+from matplotlib.collections import LineCollection
+import matplotlib as mpl
+from matplotlib.colors import rgb2hex
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import os
+
+
+# http://www.jtrive.com/visualizing-population-density-by-zip-code-with-basemap.html
+# Read in population data.
+DF       = summary 
+us_shape_file_dir = "C:\EliPersonal\Python\Datasets\cb_2017_us_zcta510_500k"
+os.chdir(us_shape_file_dir)
+
+# https://matplotlib.org/tutorials/colors/colormaps.html
+colormap = plt.cm.YlOrBr #Wistia goes from light yellow to bright orange, or "coolwarm" blue to red
+
+
+# NYC coordinates westlimit=-74.2591; southlimit=40.4774; eastlimit=-73.7002; northlimit=40.9162
+# x is longitutude, y is latitude, for mapping
+lowerlon = -73.7002
+upperlon = -74.2591
+lowerlat = 40.9162
+upperlat = 40.4774
+fig = plt.figure(figsize = (8,8))
+
+m = Basemap(
+    llcrnrlon=lowerlon,
+    llcrnrlat=lowerlat,
+    urcrnrlon=upperlon,
+    urcrnrlat=upperlat,
+    projection="mill",
+    resolution="l",
+    lat_0=lowerlat,
+    lat_1=upperlat,
+    lon_0=lowerlon,
+    lon_1=upperlon
+    )
+
+shp_info = m.readshapefile(os.path.basename(us_shape_file_dir),'states',drawbounds=True)
+plt.gca().axis('off')
+plt.show()
+
+# x is longitutude, y is latitude, for mapping
+summary = summary.dropna()
+lon = list(summary['longitude'].astype('float'))
+lat = list(summary['latitude'].astype('float'))
+summary['latitude'].dtype
+summary.latitude.isna().sum()
+
+#size = list(summary['cop12_pct'].astype('float')) #not needed
+
+ziplist = []
+colors = {}
+vmin = summary.cop12_pct.min()
+vmax = summary.cop12_pct.max()
+
+# Filter m.states_info to only NYC zipcodes.
+popdens = {i:j for (i,j) in zip(summary.Zipcode, summary.cop12_pct)}
+
+# Filter m.states_info to only NYC zipcodes.
+zip_info   = m.states_info
+popdiv     = (max(popdens.values())/(vmax-vmin))
+popdensscl = {i:(j/popdiv) for (i,j) in popdens.items()}
+
+# Colorbar.
+sm = plt.cm.ScalarMappable(    cmap=colormap,norm=mpl.colors.Normalize(vmin=vmin, vmax=vmax))
+mm = plt.cm.ScalarMappable(cmap=colormap)
+mm.set_array([vmin, vmax])
+plt.colorbar(mm,ticks=np.arange(vmin, vmax + 0.2, 0.2),orientation="vertical")
+plt.title("Copper Concentration in NYC Tap (1-2 minute), Percentile by ZIP5")
+plt.gca().axis("off")
+
+# Populate plot with coloring based on Percentile
+for d in zip_info:
+    iterzip = d["ZCTA5CE10"]
+    if iterzip in popdensscl.keys():
+        iterpop = popdensscl.get(iterzip,0)
+        colors[iterzip] = colormap(iterpop/vmax)[:3]
+    ziplist.append(iterzip)
+
+
+for nshape,seg in enumerate(m.states):
+    i, j = zip(*seg)
+    if ziplist[nshape] in popdensscl.keys():
+        color = rgb2hex(colors[ziplist[nshape]])
+        edgecolor = "#000000"
+        plt.fill(i,j,color,edgecolor=edgecolor);
+
+plt.show()
