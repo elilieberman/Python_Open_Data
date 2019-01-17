@@ -13,3 +13,10 @@ Aggregated volume by month and presented in graph
 * Classification logistic regression,  which types of food (cuisine type) and violation types, may be leading indicators of restaurant closings (for health violations).   
 * Preprocessed string fields, to time-objects, time-deltas, created dummies for cuisine and violation types, 
 * Used kbest algrithm to find the most informative features.
+
+# NYC TAP Files
+Review of NYC open data related to metals concentration in NYC  tap water.
+1. Coded in Python, primarily utilizing Pandas, Matplotlib and Basemap 
+2. Intensity of map color parallels zip code areas relative concentration level (charts maps the copper concentrations in the 1-2 minute draw).
+3. Data cleansing was performed on NYC open data, i.e. fixing data types, missing valuesnaming inconsistencies
+4. Geocoding (latitiude and longitude) data was appended to the NYC dataset to facilitate the heat-map chart
